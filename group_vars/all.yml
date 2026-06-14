@@ -1,0 +1,13 @@
+---
+# Users to create
+users_to_create:
+  - danha
+  - msilva
+  - corazoncito
+
+# SSH key type
+ssh_key_type: ed25519
+
+# Server for SSH config
+server_config:
+  hostname: 192.168.162.128

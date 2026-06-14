@@ -1,0 +1,7 @@
+---
+- name: Configure VM at 192.168.162.129
+  hosts: vm_host
+  gather_facts: true
+  
+  roles:
+    - vm_setup

@@ -1,0 +1,110 @@
+---
+- name: Check if firewalld is active
+  systemd:
+    name: firewalld
+  register: firewalld_status
+  ignore_errors: true
+
+- name: Open SSH port in firewalld if active
+  block:
+    - name: Add SSH service to firewall
+      firewalld:
+        service: ssh
+        permanent: true
+        state: enabled
+        immediate: true
+      become: true
+      when: firewalld_status.status is defined and firewalld_status.status.ActiveState == "active"
+  rescue:
+    - name: Alternative firewall setup using firewall-cmd
+      shell: |
+        firewall-cmd --permanent --add-service=ssh
+        firewall-cmd --reload
+      become: true
+      when: firewalld_status.status is defined and firewalld_status.status.ActiveState == "active"
+
+- name: Generate random initial passwords for users
+  shell: "openssl rand -base64 12"
+  delegate_to: localhost
+  become: false
+  changed_when: false
+  register: password_results
+  loop: "{{ users_to_create }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Build initial password map
+  set_fact:
+    user_passwords: "{{ user_passwords | default({}) | combine({ item.item: item.stdout }) }}"
+  loop: "{{ password_results.results }}"
+  delegate_to: localhost
+  become: false
+
+- name: Create users
+  user:
+    name: "{{ item }}"
+    groups: wheel
+    shell: /bin/bash
+    createhome: true
+    password: "{{ user_passwords[item] | password_hash('sha512') }}"
+    update_password: always
+  loop: "{{ users_to_create }}"
+  become: true
+
+- name: Force password change on first login
+  command: chage -d 0 "{{ item }}"
+  loop: "{{ users_to_create }}"
+  become: true
+
+- name: Create .ssh directory for each user
+  file:
+    path: "/home/{{ item }}/.ssh"
+    state: directory
+    mode: '0700'
+    owner: "{{ item }}"
+    group: "{{ item }}"
+  loop: "{{ users_to_create }}"
+  become: true
+
+- name: Generate ed25519 SSH keys for users
+  openssh_keypair:
+    path: "/home/{{ item }}/.ssh/id_ed25519"
+    type: ed25519
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: '0600'
+  loop: "{{ users_to_create }}"
+  become: true
+
+- name: Create ssh config file for each user
+  template:
+    src: ssh_config.j2
+    dest: "/home/{{ item }}/.ssh/config"
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: '0600'
+  loop: "{{ users_to_create }}"
+  become: true
+
+- name: Display SSH public keys
+  debug:
+    msg: "Public key for {{ item }}: /home/{{ item }}/.ssh/id_ed25519.pub"
+  loop: "{{ users_to_create }}"
+
+- name: Display initial user passwords
+  debug:
+    msg: "Initial password for {{ item }}: {{ user_passwords[item] }}"
+  loop: "{{ users_to_create }}"
+
+- name: Save initial passwords to controller file
+  delegate_to: localhost
+  become: false
+  run_once: true
+  copy:
+    dest: "{{ playbook_dir }}/initial_user_passwords.txt"
+    content: |
+      Initial passwords generated for users on {{ inventory_hostname }}:
+      {% for user in users_to_create %}
+      {{ user }}: {{ user_passwords[user] }}
+      {% endfor %}
+    mode: '0600'
