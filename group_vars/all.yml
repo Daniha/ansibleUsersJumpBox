@@ -10,4 +10,4 @@ ssh_key_type: ed25519
 
 # Server for SSH config
 server_config:
-  hostname: 192.168.162.128
+  hostname: 192.168.162.1xx
