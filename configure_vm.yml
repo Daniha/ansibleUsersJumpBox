@@ -1,5 +1,5 @@
 ---
-- name: Configure VM at 192.168.162.129
+- name: Configure VM at 192.168.162.xxx
   hosts: vm_host
   gather_facts: true
   
