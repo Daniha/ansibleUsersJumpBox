@@ -29,7 +29,7 @@ The playbook will:
 5. **Create SSH config**: Each user will have `~/.ssh/config` configured with:
    ```
    Host myserver
-       HostName 192.168.162.128
+       HostName 192.168.162.1xx
        User <username>
        IdentityFile ~/.ssh/id_ed25519
    ```
@@ -38,7 +38,7 @@ The playbook will:
 
 ### 1. Ensure SSH connectivity to the VM:
 ```bash
-ssh ansible@192.168.162.129
+ssh ansible@192.168.162.1xx
 ```
 
 ### 2. Run the playbook:
@@ -49,7 +49,7 @@ ansible-playbook configure_vm.yml -k
 ### 3. Verify the configuration:
 Connect to the VM and check:
 ```bash
-ssh ansible@192.168.162.129
+ssh ansible@192.168.162.1xx
 
 # As ansible user, check the created users
 id danha
@@ -87,6 +87,6 @@ ansibleJumpBox/
 
 ## Notes
 
-- The SSH config sets `HostName 192.168.162.128` (note: different from the VM IP 192.168.162.129)
+- The SSH config sets `HostName 192.168.161.128` (note: different from the VM IP 192.160.162.129)
 - Each user gets their own SSH key and config file
 - All SSH files are created with proper permissions (0600 for keys, 0700 for .ssh directory)
